@@ -1,0 +1,44 @@
+#!/usr/bin/env sh
+
+if [[ -z $(command -v jq) ]]; then
+    echo 'Get jq'
+    return 1
+fi
+
+mfa_arn=$(aws iam list-mfa-devices | jq -r ".MFADevices[0].SerialNumber")
+if [[ $? != 0 ]]; then
+    echo 'Failed to get MFA device ARN'
+    return 1
+fi
+
+_prompt() {
+    read input
+    echo $input
+}
+
+echo -n "Enter MFA code: "
+mfa_code=$(_prompt)
+
+duration=${1:-129600}
+
+# Clear env vars if session credentials already set
+if [[ ! -z $AWS_SESSION_TOKEN ]]; then
+    export AWS_ACCESS_KEY_ID=
+    export AWS_SECRET_ACCESS_KEY=
+    export AWS_SESSION_TOKEN=
+    export AWS_SESSION_EXPIRATION=
+fi
+
+aws_creds=$(aws sts get-session-token --serial-number $mfa_arn --token-code $mfa_code --duration-seconds $duration)
+if [[ $? != 0 ]]; then
+    echo 'Failed to get AWS credentials'
+    return 1
+fi
+
+export AWS_ACCESS_KEY_ID=$(jq -r ".Credentials.AccessKeyId" <<< $aws_creds)
+export AWS_SECRET_ACCESS_KEY=$(jq -r ".Credentials.SecretAccessKey" <<< $aws_creds)
+export AWS_SESSION_TOKEN=$(jq -r ".Credentials.SessionToken" <<< $aws_creds)
+export AWS_SESSION_EXPIRATION=$(jq -r ".Credentials.Expiration" <<< $aws_creds)
+
+echo "Session (ID: ${AWS_ACCESS_KEY_ID}) activated in current shell"
+echo "Session will end at $AWS_SESSION_EXPIRATION"
