@@ -19,5 +19,11 @@ source aws_mfa_me
 
 You will be prompted for MFA code. You can also replace `source` with `.` as in `. aws_mfa_me`.
 
-Arguments:
- - First argument sets session duration in seconds.
+Options:
+
+Options are set via local scope env vars, without angle brackets:
+```shell
+duration=<optional: session duration in seconds, default=129600 (36h)> \
+mfa_arn=<optional: specific MFA device ARN, default=first in MFA device list> \
+    source aws_mfa_me
+```
