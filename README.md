@@ -2,6 +2,8 @@
 
 A simple utility script that activates AWS session credentials with MFA.
 
+![Demo](demo.gif)
+
 ## Prerequisites
 1. `jq`, a utility command for parsing JSON (get it [here](https://stedolan.github.io/jq/download/)).
 1. `aws-cli`, AWS command line tools (get it [here](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html))
