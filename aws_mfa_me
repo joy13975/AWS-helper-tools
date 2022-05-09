@@ -1,10 +1,11 @@
 #!/usr/bin/env sh
 
 if [[ -z $(command -v jq) ]]; then
-    echo 'Get jq'
+    echo 'You need to install jq (see https://stedolan.github.io/jq/download/)'
     return 1
 fi
 
+echo 'Getting MFA ARN (assuming first device)...'
 mfa_arn=$(aws iam list-mfa-devices | jq -r ".MFADevices[0].SerialNumber")
 if [[ $? != 0 ]]; then
     echo 'Failed to get MFA device ARN'
