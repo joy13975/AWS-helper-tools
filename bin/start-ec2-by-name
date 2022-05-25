@@ -1,0 +1,3 @@
+#!/bin/bash
+
+ec2id=$(get-ec2id-by-name $1) && aws ec2 start-instances --instance-ids $ec2id 

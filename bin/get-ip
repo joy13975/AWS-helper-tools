@@ -1,0 +1,9 @@
+#!/bin/bash
+
+domain=${1}
+if [[ -z $domain ]]; then
+	echo 'Provide domain'
+	exit 1
+fi
+
+dig +short $domain |  awk '{ print ; exit }'
