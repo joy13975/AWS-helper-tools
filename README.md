@@ -1,42 +1,94 @@
-# aws_mfa_me
+# AWS Helper Tools
+A set of bash scripts to help with daily AWS work.
 
-A simple utility script that activates AWS session credentials with MFA.
+Script list
+* [aws-mfa-me](#aws-mfa-me)
+* [get-ec2id-by-name](#get-ec2id-by-name)
+* [start-ec2-by-name](#start-ec2-by-name)
+* [get-my-ip](#get-my-ip)
+* [get-remote-ip](#get-remote-ip)
 
-![Demo](demo.gif)
+---
 
-## Prerequisites
-1. `jq`, a utility command for parsing JSON (get it [here](https://stedolan.github.io/jq/download/)).
+## Install
+
+1. You need `jq`, a utility command for parsing JSON (get it [here](https://stedolan.github.io/jq/download/)).
 
 For MacOS:
 ```bash
 brew install jq
-sudo bash =(curl -s https://raw.githubusercontent.com/joy13975/aws_mfa_me/master/install.sh)
 ```
-1. `aws-cli`, AWS command line tools (get it [here](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html))
 
-## Install
-For bash:
+1. You need  `aws-cli`, AWS command line tools (get it [here](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html))
+
+1. Lastly, install the scripts of this repo. For bash:
 ```shell
-bash <(curl -s https://raw.githubusercontent.com/joy13975/aws_mfa_me/master/install.sh)
+bash <(curl -s https://raw.githubusercontent.com/joy13975/AWS-helper-tools/master/install.sh)
 ```
 
-## Usage
+---
+
+## `aws-mfa-me`
+
+Activates an AWS session in the current shell with MFA.
+
+
+### Usage
 ```shell
-source aws_mfa_me
+source aws-mfa-me
 ```
 
-You will be prompted for MFA code. You can also replace `source` with `.` as in `. aws_mfa_me`.
+Optional environment variables:
+* `duration`: Session duration; 129600 (36h) by default.
+* `mfa_arn`: Specific MFA device ARN; the first MFA device is used by default.
 
-You can also pass a MFA code non-interactively:
+You will be prompted for MFA code. 
+
+To pass a MFA code non-interactively, you can:
 ```shell
-echo 123456 | source aws_mfa_me
+echo 123456 | source aws-mfa-me
 ```
 
-### Options:
+To make the command shorter you can:
+* Replace `source` with `.` as in `. aws-mfa-me`.
+* Create a `bash` alias/function such as `alias give-me-aws='source aws-mfa-me'` in your `~/.bashrc` etc.
 
-Options are set via local scope env vars, without angle brackets:
-```shell
-duration=<optional: session duration in seconds, default=129600 (36h)> \
-mfa_arn=<optional: specific MFA device ARN, default=first in MFA device list> \
-    source aws_mfa_me
-```
+---
+## `get-ec2id-by-name`
+
+Self explanatory.
+
+### Usage
+`get-ec2id-by-name <EC2 instance name>`
+
+Note: only exact matches work for now.
+
+---
+## `start-ec2-by-name`
+
+
+Self explanatory.
+
+### Usage
+`start-ec2-by-name <EC2 instance name>`
+
+---
+## `get-my-ip`
+
+Fetches WAN IP of current machine.
+
+### Usage
+`get-my-ip`
+
+Optional environment variables:
+* `protocol`: IP protocol; `ipv4` by default.
+---
+
+## `get-remote-ip`
+
+Fetches WAN IP of a remote host.
+
+### Usage
+`get-remote-ip <remote domain>`
+
+---

@@ -2,7 +2,7 @@
 
 domain=${1}
 if [[ -z $domain ]]; then
-	echo 'Provide domain'
+	echo 'Provide remote domain'
 	exit 1
 fi
 

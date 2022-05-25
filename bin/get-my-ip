@@ -1,0 +1,4 @@
+#!/bin/bash
+
+protocol=${protocol:-ipv4}
+curl -s $protocol.icanhazip.com
