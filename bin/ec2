@@ -1,0 +1,47 @@
+#!/bin/bash
+
+name=$1
+cmd=$2
+cmd_args=${@:3}
+
+ec2id=$(get-ec2id-by-name $name)
+if [ $? -ne 0 ]; then
+  exit $?
+fi
+
+if [ -z $ec2id ]; then
+  echo No EC2 instance found with name "$name"
+  exit 1
+fi
+
+function _describe() {
+  aws ec2 describe-instances --instance-ids $ec2id \
+   | jq -r ."Reservations[0].Instances[0]"
+}
+
+function _extract() {
+  jq -r .$1 | tr -d '"'
+}
+
+case $cmd in
+  "")
+    _describe
+  ;;
+  status)
+    _describe | _extract "State.Name"
+  ;;
+  ip)
+    out=$(_describe)
+    echo Private: $(echo $out | _extract "PrivateIpAddress")
+    echo Public: $(echo $out | _extract "PublicIpAddress")
+  ;;
+  id)
+    echo $ec2id
+  ;;
+  extract)
+    _describe | _extract $cmd_args
+  ;;
+  *)
+    aws ec2 $cmd-instances --instance-ids $ec2id 
+  ;;
+esac

@@ -3,8 +3,8 @@ A set of bash scripts to help with daily AWS work.
 
 Script list
 * [aws-mfa-me](#aws-mfa-me)
+* [ec2](#ec2)
 * [get-ec2id-by-name](#get-ec2id-by-name)
-* [start-ec2-by-name](#start-ec2-by-name)
 * [get-my-ip](#get-my-ip)
 * [get-remote-ip](#get-remote-ip)
 
@@ -25,6 +25,18 @@ brew install jq
 ```shell
 bash <(curl -s https://raw.githubusercontent.com/joy13975/AWS-helper-tools/master/install.sh)
 ```
+
+### Add script folder to PATH
+* Bash
+```bash
+echo "export PATH=$HOME/.aws-helper-tools/bin:"'$PATH' >> ~/.bashrc
+```
+
+* Zsh
+```bash
+echo "export PATH=$HOME/.aws-helper-tools/bin:"'$PATH' >> ~/.zshrc
+```
+
 
 ---
 
@@ -54,23 +66,43 @@ To make the command shorter you can:
 * Create a `bash` alias/function such as `alias give-me-aws='source aws-mfa-me'` in your `~/.bashrc` etc.
 
 ---
+## `ec2`
+
+### Usage
+`ec2 [name] [command] [command_args]`
+
+### Examples
+*   ```bash
+    ec2 ml-cpu-instance  # no command = describe instance
+    ```
+*   ```bash
+    ec2 ml-cpu-instance start  # starts the instance
+    ```
+*   ```bash
+    ec2 ml-cpu-instance stop  # stops the instance
+    ```
+*   ```bash
+    ec2 ml-cpu-instance status  # gets instance status
+    ```
+*   ```bash
+    ec2 ml-cpu-instance ip  # gets instance private/public IP
+    ```
+*   ```bash
+    ec2 ml-cpu-instance extract PlatformDetails  # extracts arbitrary instance attribute (find keys from describe command)
+    ```
+*   ```bash
+    ec2 ml-cpu-instance reboot  # any [command] is substituted as "aws ec2 [command]-instances ..."
+    ```
+
+---
 ## `get-ec2id-by-name`
 
 Self explanatory.
 
 ### Usage
-`get-ec2id-by-name <EC2 instance name>`
+`get-ec2id-by-name [EC2 instance name]`
 
 Note: only exact matches work for now.
-
----
-## `start-ec2-by-name`
-
-
-Self explanatory.
-
-### Usage
-`start-ec2-by-name <EC2 instance name>`
 
 ---
 ## `get-my-ip`
@@ -89,6 +121,6 @@ Optional environment variables:
 Fetches WAN IP of a remote host.
 
 ### Usage
-`get-remote-ip <remote domain>`
+`get-remote-ip [remote domain]`
 
 ---

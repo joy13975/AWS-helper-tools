@@ -7,6 +7,7 @@ fi
 
 duration=${duration:-129600}
 mfa_arn=${mfa_arn:-}
+show=${show:-0}
 
 if [[ -z $mfa_arn ]]; then
     echo 'Getting MFA ARN (assuming first device)...'
@@ -43,3 +44,17 @@ export AWS_SESSION_EXPIRATION=$(jq -r ".Credentials.Expiration" <<< $aws_creds)
 
 echo "Session (ID: ${AWS_ACCESS_KEY_ID}) activated in current shell"
 echo "Session will end at $AWS_SESSION_EXPIRATION"
+
+if [[ $show == 1 ]]; then
+	echo "# Linux env vars:"
+    echo "export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID"
+    echo "export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY"
+    echo "export AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN"
+    echo
+
+	echo "# Snowflake credentials:"
+    echo -e "CREDENTIALS=(
+        AWS_KEY_ID='$AWS_ACCESS_KEY_ID'
+        AWS_SECRET_KEY='$AWS_SECRET_ACCESS_KEY'
+        AWS_TOKEN='$AWS_SESSION_TOKEN')"
+fi
