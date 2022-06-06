@@ -18,6 +18,10 @@ For MacOS:
 ```bash
 brew install jq
 ```
+For yum systems:
+```bash
+sudo yum install -y jq
+```
 
 1. You need  `aws-cli`, AWS command line tools (get it [here](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html))
 
