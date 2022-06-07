@@ -12,21 +12,8 @@ Script list
 
 ## Install
 
-1. You need `jq`, a utility command for parsing JSON (get it [here](https://stedolan.github.io/jq/download/)).
-
-For MacOS:
-```bash
-brew install jq
-```
-For yum systems:
-```bash
-sudo yum install -y jq
-```
-
-1. You need  `aws-cli`, AWS command line tools (get it [here](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html))
-
-1. Lastly, install the scripts of this repo. For bash:
-```shell
+1. Install the scripts of this repo. For bash:
+```shell0
 bash <(curl -s https://raw.githubusercontent.com/joy13975/AWS-helper-tools/master/install.sh)
 ```
 
@@ -72,27 +59,32 @@ To make the command shorter you can:
 ---
 ## `ec2`
 
+A `aws ec2` helper that works with instance names (tag value) rather than instance-ids.
+
 ### Usage
 `ec2 [name] [command] [command_args]`
 
 ### Examples
 *   ```bash
-    ec2 ml-cpu-instance  # no command = describe instance
+    ec2 ml-cpu  # no command = describe instances containing name "ml-cpu"
     ```
 *   ```bash
-    ec2 ml-cpu-instance start  # starts the instance
+    ec2 ml list  # list instances containing name "ml"
     ```
 *   ```bash
-    ec2 ml-cpu-instance stop  # stops the instance
+    ec2 ml-cpu start  # starts instances containing name "ml-cpu"
     ```
 *   ```bash
-    ec2 ml-cpu-instance status  # gets instance status
+    ec2 ml-cpu stop  # stops the instance
     ```
 *   ```bash
-    ec2 ml-cpu-instance ip  # gets instance private/public IP
+    ec2 ml-cpu status  # gets instance status
     ```
 *   ```bash
-    ec2 ml-cpu-instance extract PlatformDetails  # extracts arbitrary instance attribute (find keys from describe command)
+    ec2 ml-cpu ip  # gets instance private/public IP
+    ```
+*   ```bash
+    ec2 ml-cpu extract PlatformDetails  # extracts arbitrary instance attribute (find keys from describe command)
     ```
 *   ```bash
     ec2 ml-cpu-instance reboot  # any [command] is substituted as "aws ec2 [command]-instances ..."

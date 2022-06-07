@@ -9,18 +9,23 @@ if [ $? -ne 0 ]; then
   exit $?
 fi
 
-if [ -z $ec2id ]; then
+if [ -z "$ec2id" ]; then
   echo No EC2 instance found with name "$name"
   exit 1
 fi
 
 function _describe() {
-  aws ec2 describe-instances --instance-ids $ec2id \
-   | jq -r ."Reservations[0].Instances[0]"
-}
-
-function _extract() {
-  jq -r .$1 | tr -d '"'
+  attribs="{InstanceId: InstanceId, Name: Tags[?Key=='Name'].Value[] | [0]"
+  if [ -z "$1" ]; then
+    attribs="$attribs}"
+  else
+    attribs="$attribs, $1}"
+  fi
+  sort_key=${2:-"Name"}
+  query="Reservations[].Instances[].$attribs"
+  query="sort_by($query, &$sort_key)[]"
+  aws ec2 describe-instances --instance-ids $(echo $ec2id) \
+    --query "$query"
 }
 
 case $cmd in
@@ -28,18 +33,21 @@ case $cmd in
     _describe
   ;;
   status)
-    _describe | _extract "State.Name"
+    _describe "State: State.Name"
   ;;
   ip)
-    out=$(_describe)
-    echo Private: $(echo $out | _extract "PrivateIpAddress")
-    echo Public: $(echo $out | _extract "PublicIpAddress")
+    _describe "PrivateIP: PrivateIpAddress, PublicIP: PublicIpAddress"
   ;;
   id)
     echo $ec2id
   ;;
+  list)
+    aws ec2 describe-instances \
+    --query "Reservations[].Instances[?Tags[?Key == 'Name' && contains(Value, '$name')][]][].Tags[?Key == 'Name'].Value[]" \
+    --out text | sed 's/\t/\n/g' | sort
+  ;;
   extract)
-    _describe | _extract $cmd_args
+    _describe $cmd_args
   ;;
   *)
     aws ec2 $cmd-instances --instance-ids $ec2id 
