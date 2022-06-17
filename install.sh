@@ -8,5 +8,5 @@ if [ "$?" -ne 0 ]; then
 fi
 
 repo_path=${repo_path:-~/.aws-helper-tools}
-git clone git@github.com:joy13975/AWS-helper-tools.git $repo_path
+git clone https://github.com/joy13975/AWS-helper-tools.git $repo_path
 
