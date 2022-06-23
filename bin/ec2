@@ -25,7 +25,7 @@ function _describe() {
   query="Reservations[].Instances[].$attribs"
   query="sort_by($query, &$sort_key)[]"
   aws ec2 describe-instances --instance-ids $(echo $ec2id) \
-    --query "$query"
+    --query "$query" --no-cli-pager
 }
 
 case $cmd in
@@ -50,6 +50,6 @@ case $cmd in
     _describe $cmd_args
   ;;
   *)
-    aws ec2 $cmd-instances --instance-ids $ec2id 
+    aws ec2 $cmd-instances --instance-ids $ec2id  --no-cli-pager
   ;;
 esac
