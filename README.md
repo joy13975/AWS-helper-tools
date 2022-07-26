@@ -1,33 +1,23 @@
 # AWS Helper Tools
 A set of bash scripts to help with daily AWS work.
 
-Script list
-* [aws-mfa-me](#aws-mfa-me)
-* [ec2](#ec2)
-* [get-ec2id-by-name](#get-ec2id-by-name)
-* [get-my-ip](#get-my-ip)
-* [get-remote-ip](#get-remote-ip)
+Tool list
+* [aws-mfa-me](#aws-mfa-me) - minimal AWS credential session initialization for MFA accounts.
+* [ec2](#ec2) - simple search & control of EC2 instances.
+* [get-ec2id-by-name](#get-ec2id-by-name) - self explanatory.
+* [get-my-ip](#get-my-ip) - get WAN IP of current computer.
+* [get-remote-ip](#get-remote-ip) - get WAN IP of remote computer by domain.
 
 ---
 
-## Install
+## Installation
 
-1. Install the scripts of this repo. For bash:
-```shell0
-bash <(curl -s https://raw.githubusercontent.com/joy13975/AWS-helper-tools/master/install.sh)
+Use the auto installer script:
+```shell
+source <(curl -s https://raw.githubusercontent.com/joy13975/AWS-helper-tools/master/install.sh)
 ```
 
-### Add script folder to PATH
-* Bash
-```bash
-echo "export PATH=$HOME/.aws-helper-tools/bin:"'$PATH' >> ~/.bashrc
-```
-
-* Zsh
-```bash
-echo "export PATH=$HOME/.aws-helper-tools/bin:"'$PATH' >> ~/.zshrc
-```
-
+※ This automatically inserts to $PATH in your RC file (`~/.zsh` or `~/.bashrc`)
 
 ---
 
@@ -43,7 +33,7 @@ source aws-mfa-me
 
 Optional environment variables:
 * `duration`: Session duration; 129600 (36h) by default.
-* `mfa_arn`: Specific MFA device ARN; the first MFA device is used by default.
+* `mfa_arn`: Specific MFA device ARN; the first MFA device is used by default. Usage example: `mfa_arn=<specific device arn> source aws-mfa-me`
 
 You will be prompted for MFA code. 
 
@@ -52,9 +42,9 @@ To pass a MFA code non-interactively, you can:
 echo 123456 | source aws-mfa-me
 ```
 
-To make the command shorter you can:
-* Replace `source` with `.` as in `. aws-mfa-me`.
-* Create a `bash` alias/function such as `alias give-me-aws='source aws-mfa-me'` in your `~/.bashrc` etc.
+Tips:
+* You can replace `source` with `.` as in `. aws-mfa-me`.
+* Create a `bash` alias/function such as `alias use-aws='source aws-mfa-me'` in your `~/.bashrc` to make the command super short.
 
 ---
 ## `ec2`
