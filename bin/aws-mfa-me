@@ -9,9 +9,12 @@ duration=${duration:-129600}
 mfa_arn=${mfa_arn:-}
 show=${show:-0}
 
+user_arn=$(aws sts get-caller-identity | jq -r ".Arn")
+user_name=${user_arn##*/}
+
 if [[ -z $mfa_arn ]]; then
     echo 'Getting MFA ARN (assuming first device)...'
-    mfa_arn=$(aws iam list-mfa-devices | jq -r ".MFADevices[0].SerialNumber")
+    mfa_arn=$(aws iam list-mfa-devices --user-name $user_name | jq -r ".MFADevices[0].SerialNumber")
 fi
 
 if [[ $? != 0 ]]; then
