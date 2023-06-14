@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+# Returns first MFA device that matches name
+# If no name specified, than first one is returned from user's list of devices
+DEVICE_NAME=${DEVICE_NAME:-"mfa"}
+
+user_name=$(aws-user-name)
+aws iam list-mfa-devices --user-name $user_name \
+    | jq -r ".MFADevices[].SerialNumber" \
+    | grep $DEVICE_NAME | head -n1
