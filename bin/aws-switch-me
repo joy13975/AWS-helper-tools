@@ -1,37 +1,63 @@
 #!/bin/bash
-unset AWS_PROFILE
-unset AWS_REGION
-unset AWS_ACCESS_KEY_ID
-unset AWS_SECRET_ACCESS_KEY
-unset AWS_SESSION_TOKEN
+# unset AWS_PROFILE
+# unset AWS_REGION
+# if [ ! -z $AWS_SESSION_TOKEN ]; then
+#     unset AWS_ACCESS_KEY_ID
+#     unset AWS_SECRET_ACCESS_KEY
+#     unset AWS_SESSION_TOKEN
+# fi
 
-AWS_PROFILE=${1:-poc001}
+aws_profile=${aws_profile:-'default'}
+[ ! -z $aws_profile ] && [ ! -z $(aws configure list-profiles | grep -F -e "$aws_profile-role")]
+has_no_role_profile=$?  # bash 0 is "success"
 
-_get() {
-    aws configure --profile $AWS_PROFILE-role get $1
+_get_from_config() {
+    if [ $has_no_role_profile ]; then
+        return
+    fi
+    aws configure --profile $aws_profile-role get $1
 }
 
-endpoint_url=$(_get endpoint_url)
-endpoint_arg="--endpoint-url $endpoint_url"
-if [ -z "$endpoint_url" ]; then
-    endpoint_arg=''
+ROLE_ARN=${ROLE_ARN:-$(_get_from_config role_arn)}
+MFA_ARN=${MFA_ARN:-$(_get_from_config mfa_arn)}
+SESSION_NAME=${${SESSION_NAME:-$(_get_from_config role_session_name)}:-"temp-session"}
+DURATION=${${DURATION:-$(_get_from_config duration_seconds)}:-3600}
+
+endpoint_url=$(_get_from_config endpoint_url)
+
+_make_optional_arg() {
+    flag=$1
+    value=$2
+    if [ -z "$value" ]; then
+        echo ''
+    else
+        echo $flag $value
+    fi
+}
+endpoint_arg=$(_make_optional_arg --endpoint-url $endpoint_url)
+REGION=${REGION:-$(_get_from_config region)}
+region_arg=$(_make_optional_arg --region $REGION)
+
+if [ ! -z $MFA_ARN ]; then
+    echo "MFA_ARN: ${MFA_ARN}"
+    mfa_code=$(oath | grep -i "($(aws-user-name))" | awk '{print $NF}')
+    mfa_arg="--serial-number $MFA_ARN --token-code $mfa_code"
+else
+    echo 'MFA_ARN is empty - not using MFA!'
+    mfa_code=''
+    mfa_arg=''
 fi
 
-mfa_code=$(oath | grep -i 'AWS '$AWS_PROFILE | awk '{print $NF}')
-region=$(_get region)
 cmd="aws sts assume-role \
-    --region $region\
-    --role-arn $(_get role_arn) \
-    --serial-number $(_get mfa_serial) \
-    --role-session-name $(_get role_session_name) \
-    --duration-second $(_get duration_seconds) \
-    $endpoint_arg --token-code"
+    $region_arg \
+    --role-arn $ROLE_ARN \
+    --role-session-name $SESSION_NAME \
+    --duration-second $DURATION \
+    $endpoint_arg \
+    $mfa_arg"
 
-export AWS_PROFILE=$AWS_PROFILE
+# export AWS_PROFILE=$AWS_PROFILE
 
-echo Caller ARN: $(aws sts get-caller-identity --query 'Arn')
-echo MFA: $mfa_code
-cmd="$cmd $mfa_code"
 # echo $cmd
 output=$(eval $cmd)
 if [ $? -ne 0 ]; then
@@ -45,13 +71,11 @@ _jq_get() {
     echo $output | jq -r .Credentials.$1
 }
 
-export AWS_REGION=$region
 export AWS_ACCESS_KEY_ID=$(_jq_get AccessKeyId)
 export AWS_SECRET_ACCESS_KEY=$(_jq_get SecretAccessKey)
 export AWS_SESSION_TOKEN=$(_jq_get SessionToken)
 
-
-if [[ $show == 1 ]]; then
+if [[ $SHOW == 1 ]]; then
 	echo "# Linux env vars:"
     echo "export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID"
     echo "export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY"
