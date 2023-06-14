@@ -5,13 +5,13 @@ if [ -z $(command -v jq) ]; then
     return 1
 fi
 
-export AWS_PROFILE=${AWS_PROFILE:-$1}
+export AWS_PROFILE=${1:-${AWS_PROFILE:-'default'}}
 echo AWS_PROFILE is $AWS_PROFILE
-DURATION=${DURATION:-129600}
+duration=${DURATION:-129600}
 
 if [ -z $MFA_ARN ]; then
     echo 'Getting MFA ARN (assuming first device)...'
-    local MFA_ARN=$(aws-mfa-arn)
+    mfa_arn=$(aws-mfa-arn)
 fi
 
 if [[ $? != 0 ]]; then
@@ -19,7 +19,7 @@ if [[ $? != 0 ]]; then
     return 1
 fi
 
-echo -n "Enter MFA code for device $MFA_ARN: "
+echo -n "Enter MFA code for device $mfa_arn: "
 read mfa_code
 echo ""
 echo "MFA Code: ${mfa_code}"
@@ -32,14 +32,14 @@ if [[ ! -z $AWS_SESSION_TOKEN ]]; then
     unset AWS_SESSION_EXPIRATION
 fi
 
-local region_args=''
+region_args=''
 if [ ! -z $AWS_REGION ]; then
     region_args="--region $AWS_REGION --endpoint https://sts.$AWS_REGION.amazonaws.com"
 fi
 
-cmd="aws sts get-session-token $region_args --serial-number $MFA_ARN --token-code $mfa_code --duration-seconds $DURATION"
+cmd="aws sts get-session-token $region_args --serial-number $mfa_arn --token-code $mfa_code --duration-seconds $duration"
 echo $cmd
-aws_creds=$(aws sts get-session-token --serial-number $MFA_ARN --token-code $mfa_code --duration-seconds $DURATION)
+aws_creds=$(aws sts get-session-token --serial-number $mfa_arn --token-code $mfa_code --duration-seconds $duration)
 if [[ $? != 0 ]]; then
     echo 'Failed to get AWS credentials'
     return 1

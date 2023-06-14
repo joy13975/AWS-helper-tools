@@ -2,9 +2,22 @@
 
 # Returns first MFA device that matches name
 # If no name specified, than first one is returned from user's list of devices
-DEVICE_NAME=${DEVICE_NAME:-"mfa"}
+
+# If first arg is specified, prioritize it
+export AWS_PROFILE=${1:-${AWS_PROFILE:-'default'}}
+
+# If mfa_arn is set in profile, prioritize it
+profile_mfa_arn=$(aws configure --profile $AWS_PROFILE get mfa_arn 2> /dev/null)
+
+if [ ! -z $profile_mfa_arn ]; then
+    echo $profile_mfa_arn
+    exit 0
+fi
+
+# When not specified in profile, get from aws-cli
+device_name=${DEVICE_NAME:-"mfa"}
 
 user_name=$(aws-user-name)
 aws iam list-mfa-devices --user-name $user_name \
     | jq -r ".MFADevices[].SerialNumber" \
-    | grep $DEVICE_NAME | head -n1
+    | grep $device_name | head -n1 2> /dev/null

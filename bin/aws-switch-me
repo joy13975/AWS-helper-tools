@@ -1,27 +1,33 @@
 #!/bin/bash
-# unset AWS_PROFILE
-# unset AWS_REGION
-# if [ ! -z $AWS_SESSION_TOKEN ]; then
-#     unset AWS_ACCESS_KEY_ID
-#     unset AWS_SECRET_ACCESS_KEY
-#     unset AWS_SESSION_TOKEN
-# fi
+echo AWS_PROFILE is $AWS_PROFILE
 
-aws_profile=${aws_profile:-'default'}
-[ ! -z $aws_profile ] && [ ! -z $(aws configure list-profiles | grep -F -e "$aws_profile-role")]
+role_profile=$1
+echo role_profile is $role_profile
+if [ -z $role_profile ]; then
+    echo Must specify first argument for "role_profile"
+    return 1
+fi
+
+[ ! -z $(aws configure list-profiles | grep -F -e $role_profile) ]
 has_no_role_profile=$?  # bash 0 is "success"
 
 _get_from_config() {
-    if [ $has_no_role_profile ]; then
+    if [ $has_no_role_profile -eq 1 ]; then
         return
     fi
-    aws configure --profile $aws_profile-role get $1
+    aws configure --profile $role_profile get $1
 }
 
-ROLE_ARN=${ROLE_ARN:-$(_get_from_config role_arn)}
-MFA_ARN=${MFA_ARN:-$(_get_from_config mfa_arn)}
-SESSION_NAME=${${SESSION_NAME:-$(_get_from_config role_session_name)}:-"temp-session"}
-DURATION=${${DURATION:-$(_get_from_config duration_seconds)}:-3600}
+role_arn=${ROLE_ARN:-$(_get_from_config role_arn)}
+
+if [ -z $role_arn ]; then
+    echo No role_arn found in profile "${role_profile}"
+    return 1
+fi
+
+mfa_arn=${MFA_ARN:-$(_get_from_config mfa_arn)}
+session_name=${${SESSION_NAME:-$(_get_from_config role_session_name)}:-"temp-session"}
+duration=${${DURATION:-$(_get_from_config duration_seconds)}:-3600}
 
 endpoint_url=$(_get_from_config endpoint_url)
 
@@ -35,30 +41,31 @@ _make_optional_arg() {
     fi
 }
 endpoint_arg=$(_make_optional_arg --endpoint-url $endpoint_url)
-REGION=${REGION:-$(_get_from_config region)}
-region_arg=$(_make_optional_arg --region $REGION)
+region=${REGION:-$(_get_from_config region)}
+region_arg=$(_make_optional_arg --region $region)
 
-if [ ! -z $MFA_ARN ]; then
-    echo "MFA_ARN: ${MFA_ARN}"
-    mfa_code=$(oath | grep -i "($(aws-user-name))" | awk '{print $NF}')
-    mfa_arg="--serial-number $MFA_ARN --token-code $mfa_code"
+if [ ! -z $mfa_arn ]; then
+    echo -n "Enter MFA code for device $mfa_arn: "
+    read mfa_code
+    echo ""
+    echo "MFA Code: ${mfa_code}"
+    mfa_arg="--serial-number $mfa_arn --token-code $mfa_code"
 else
     echo 'MFA_ARN is empty - not using MFA!'
     mfa_code=''
     mfa_arg=''
 fi
 
-cmd="aws sts assume-role \
+cmd=$(echo "aws sts assume-role \
     $region_arg \
-    --role-arn $ROLE_ARN \
-    --role-session-name $SESSION_NAME \
-    --duration-second $DURATION \
+    --role-arn $role_arn \
+    --role-session-name $session_name \
+    --duration-second $duration \
     $endpoint_arg \
-    $mfa_arg"
+    $mfa_arg" | tr -s ' '
+)
 
-# export AWS_PROFILE=$AWS_PROFILE
-
-# echo $cmd
+echo $cmd
 output=$(eval $cmd)
 if [ $? -ne 0 ]; then
     echo $output
