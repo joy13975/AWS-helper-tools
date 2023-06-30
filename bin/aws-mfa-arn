@@ -6,11 +6,11 @@
 # If first arg is specified, prioritize it
 export AWS_PROFILE=${1:-${AWS_PROFILE:-'default'}}
 
-# If mfa_arn is set in profile, prioritize it
-profile_mfa_arn=$(aws configure --profile $AWS_PROFILE get mfa_arn 2> /dev/null)
+# If mfa_serial is set in profile, prioritize it
+profile_mfa_serial=$(aws configure --profile $AWS_PROFILE get mfa_serial 2> /dev/null)
 
-if [ ! -z $profile_mfa_arn ]; then
-    echo $profile_mfa_arn
+if [ ! -z $profile_mfa_serial ]; then
+    echo $profile_mfa_serial
     exit 0
 fi
 

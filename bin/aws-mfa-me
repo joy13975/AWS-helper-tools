@@ -9,9 +9,9 @@ export AWS_PROFILE=${1:-${AWS_PROFILE:-'default'}}
 echo AWS_PROFILE is $AWS_PROFILE
 duration=${DURATION:-129600}
 
-if [ -z $MFA_ARN ]; then
+if [ -z $MFA_SERIAL ]; then
     echo 'Getting MFA ARN (assuming first device)...'
-    mfa_arn=$(aws-mfa-arn)
+    mfa_serial=$(aws-mfa-arn)
 fi
 
 if [[ $? != 0 ]]; then
@@ -19,7 +19,7 @@ if [[ $? != 0 ]]; then
     return 1
 fi
 
-echo -n "Enter MFA code for device $mfa_arn: "
+echo -n "Enter MFA code for device $mfa_serial: "
 read mfa_code
 echo ""
 echo "MFA Code: ${mfa_code}"
@@ -37,9 +37,9 @@ if [ ! -z $AWS_REGION ]; then
     region_args="--region $AWS_REGION --endpoint https://sts.$AWS_REGION.amazonaws.com"
 fi
 
-cmd="aws sts get-session-token $region_args --serial-number $mfa_arn --token-code $mfa_code --duration-seconds $duration"
+cmd="aws sts get-session-token $region_args --serial-number $mfa_serial --token-code $mfa_code --duration-seconds $duration"
 echo $cmd
-aws_creds=$(aws sts get-session-token --serial-number $mfa_arn --token-code $mfa_code --duration-seconds $duration)
+aws_creds=$(aws sts get-session-token --serial-number $mfa_serial --token-code $mfa_code --duration-seconds $duration)
 if [[ $? != 0 ]]; then
     echo 'Failed to get AWS credentials'
     return 1
