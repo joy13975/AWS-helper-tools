@@ -5,13 +5,13 @@ if [ -z $(command -v jq) ]; then
     return 1
 fi
 
-export AWS_PROFILE=${1:-${AWS_PROFILE:-'default'}}
+export AWS_PROFILE=${1:-'default'}
 echo AWS_PROFILE is $AWS_PROFILE
 duration=${DURATION:-129600}
 
 if [ -z $MFA_SERIAL ]; then
     echo 'Getting MFA ARN (assuming first device)...'
-    mfa_serial=$(aws-mfa-arn)
+    mfa_serial=$(aws-mfa-arn $AWS_PROFILE)
 fi
 
 if [[ $? != 0 ]]; then

@@ -4,7 +4,7 @@
 # If no name specified, than first one is returned from user's list of devices
 
 # If first arg is specified, prioritize it
-export AWS_PROFILE=${1:-${AWS_PROFILE:-'default'}}
+export AWS_PROFILE=${1:-'default'}
 
 # If mfa_serial is set in profile, prioritize it
 profile_mfa_serial=$(aws configure --profile $AWS_PROFILE get mfa_serial 2> /dev/null)
