@@ -14,8 +14,11 @@ _get_from_config() {
     aws configure --profile $1 get $2
 }
 
-export source_profile=${source_profile:-$(_get_from_config $role_profile source_profile)}
+source_profile=$(_get_from_config $role_profile source_profile)
 echo source_profile is $source_profile
+
+unset AWS_ACCESS_KEY_ID
+unset AWS_SECRET_ACCESS_KEY
 
 if [ -z $source_profile ]; then
     echo 'Warning: source_profile is empty'
@@ -28,7 +31,7 @@ if [ -z $role_arn ]; then
     return 1
 fi
 
-mfa_serial=${MFA_SERIAL:-$(_get_from_config $source_profile mfa_serial)}
+mfa_serial=${MFA_SERIAL:-$(_get_from_config $role_profile mfa_serial)}
 session_name=${SESSION_NAME:-$(_get_from_config $role_profile role_session_name)}
 session_name=${session_name:-"temp-session"}
 duration=${DURATION:-$(_get_from_config $role_profile duration_seconds)}
