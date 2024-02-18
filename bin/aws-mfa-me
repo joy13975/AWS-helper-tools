@@ -1,61 +1,164 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 if [ -z $(command -v jq) ]; then
     echo 'You need to install jq (see https://stedolan.github.io/jq/download/)'
     return 1
 fi
 
-export AWS_PROFILE=${1:-'default'}
-echo AWS_PROFILE is $AWS_PROFILE
-duration=${DURATION:-129600}
-
-if [ -z $MFA_SERIAL ]; then
-    echo 'Getting MFA ARN (assuming first device)...'
-    mfa_serial=$(aws-mfa-arn $AWS_PROFILE)
-fi
-
-if [[ $? != 0 ]]; then
-    echo 'Failed to get MFA device ARN'
+target_profile=$1
+echo Targeting profile \"$target_profile\"
+if [ -z $target_profile ]; then
+    echo Must specify first argument for "target_profile"
     return 1
 fi
 
-echo -n "Enter MFA code for device $mfa_serial: "
-read mfa_code
-echo ""
-echo "MFA Code: ${mfa_code}"
+_jq_get() {
+    echo $1 | jq -r .Credentials.$2
+}
 
-# Clear env vars if session credentials already set
-if [[ ! -z $AWS_SESSION_TOKEN ]]; then
+_make_optional_arg() {
+    flag=$1
+    value=$2
+    if [ -z "$value" ]; then
+        echo ''
+    else
+        echo $flag $value
+    fi
+}
+
+_get_from_config() {
+    aws configure --profile $1 get $2
+}
+
+_get_new_role_creds() {
+    echo Attempting to refresh credentials...
+    [ ! -z $(aws configure list-profiles | grep -w "$target_profile$") ]
+    if [ $? -ne 0 ]; then  # bash 0 is "success"
+        echo "Target profile ${target_profile} not found"
+        return 1
+    fi
+
+    local source_profile=$(_get_from_config $target_profile source_profile)
+    local is_role=$(test -z $source_profile; echo $?)
+    if [ $is_role -eq 0 ]; then
+        echo "source_profile is not defined for ${target_profile} - treating it as an IAM user!"
+        source_profile=$target_profile
+    else
+        echo source_profile is $source_profile
+    fi
+
     unset AWS_ACCESS_KEY_ID
     unset AWS_SECRET_ACCESS_KEY
-    unset AWS_SESSION_TOKEN
-    unset AWS_SESSION_EXPIRATION
+
+    local role_arn_arg=
+    if [ $is_role -eq 1 ]; then
+        local role_arn=${ROLE_ARN:-$(_get_from_config $target_profile role_arn)}
+        if [ -z $role_arn ]; then
+            echo No role_arn found in profile "${target_profile}"
+            return 1
+        fi
+        role_arn_arg="--role-arn $role_arn"
+    fi
+
+    local mfa_serial=$(_get_from_config $target_profile mfa_serial)
+    local session_name=${$(_get_from_config $target_profile role_session_name):-"temp-session"}
+    local duration=${DURATION:-$(_get_from_config $target_profile duration_seconds)}
+    duration=${duration:-3600}
+    local endpoint_url=$(_get_from_config $target_profile endpoint_url)
+    local endpoint_arg=$(_make_optional_arg --endpoint-url $endpoint_url)
+    local region=${REGION:-$(_get_from_config $target_profile region)}
+    region=${region:-$(_get_from_config $source_profile region)}
+    local region_arg=$(_make_optional_arg --region $region)
+
+    local mfa_arg=''
+    if [ ! -z $mfa_serial ]; then
+        echo -n "Enter MFA code for device $mfa_serial: "
+        read mfa_code
+        echo ""
+        echo "MFA Code: ${mfa_code}"
+        mfa_arg="--serial-number $mfa_serial --token-code $mfa_code"
+    else
+        echo 'No mfa_serial defined - skipping MFA!'
+    fi
+
+    local cmd=
+    if [ $is_role -eq 1 ]; then
+        cmd=$(echo "AWS_PROFILE=${source_profile} aws sts assume-role \
+            $region_arg \
+            $role_arn_arg \
+            --role-session-name $session_name \
+            --duration-second $duration \
+            $endpoint_arg \
+            $mfa_arg" | tr -s ' '
+        )
+    else
+        cmd=$(echo "AWS_PROFILE=${source_profile} aws sts get-session-token \
+            $region_arg \
+            --duration-second $duration \
+            $endpoint_arg \
+            $mfa_arg" | tr -s ' '
+        )
+    fi
+
+    echo $cmd
+    output=$(eval $cmd)
+    if [ $? -ne 0 ]; then
+        echo $output
+        echo
+        echo 'Something went wrong...'
+        return 1
+    fi
+
+    # save output to cache
+    echo $output > $cache_path
+    chmod 600 $cache_path
+    
+    local _ret_varname=$1
+    eval $_ret_varname=\$output
+    return 0
+}
+
+
+local refresh_thresh=${REFRESH_THRESH:-10}
+# create cache dir if not exists
+local cache_dir=~/.aws/aht_cache
+mkdir -p $cache_dir
+
+# check whether cache exists
+local cache_path=$cache_dir/$target_profile
+local force_refresh=${FORCE_REFRESH:-0}
+if [ -e $cache_path ] && [ $force_refresh -ne 1 ]; then
+    # check that remaining time is sufficient
+    output=$(cat $cache_path)
+
+    fmt="%Y-%m-%dT%H:%M:%SZ"
+    curr_ts=$(date -j -f $fmt $(date -u +$fmt) +%s)
+    aws_fmt="%Y-%m-%dT%H:%M:%S+00:00"
+    expiry=$(date -j -f $aws_fmt $(_jq_get $output Expiration) +%s)
+    tte=$(((${expiry}-${curr_ts})/60))
+    echo "Remaining session: ${tte} minutes; min required: ${refresh_thresh} minutes"
+    if [ $tte -le $refresh_thresh ]; then
+        # refresh
+        _get_new_role_creds output
+    else
+        echo "Session is fresh!"
+    fi
+else
+    # refresh
+    _get_new_role_creds output
 fi
 
-region_args=''
-if [ ! -z $AWS_REGION ]; then
-    region_args="--region $AWS_REGION --endpoint https://sts.$AWS_REGION.amazonaws.com"
+if [ $? -ne 0 ]; then
+    return $?
 fi
 
-cmd="aws sts get-session-token $region_args --serial-number $mfa_serial --token-code $mfa_code --duration-seconds $duration"
-echo $cmd
-aws_creds=$(aws sts get-session-token --serial-number $mfa_serial --token-code $mfa_code --duration-seconds $duration)
-if [[ $? != 0 ]]; then
-    echo 'Failed to get AWS credentials'
-    return 1
-fi
-
-export AWS_ACCESS_KEY_ID=$(jq -r ".Credentials.AccessKeyId" <<< $aws_creds)
-export AWS_SECRET_ACCESS_KEY=$(jq -r ".Credentials.SecretAccessKey" <<< $aws_creds)
-export AWS_SESSION_TOKEN=$(jq -r ".Credentials.SessionToken" <<< $aws_creds)
-export AWS_SESSION_EXPIRATION=$(jq -r ".Credentials.Expiration" <<< $aws_creds)
-
-echo "Session (ID: ${AWS_ACCESS_KEY_ID}) activated in current shell"
-echo "Session will end at $AWS_SESSION_EXPIRATION"
+echo Applying session credentials...
+export AWS_ACCESS_KEY_ID=$(_jq_get $output AccessKeyId)
+export AWS_SECRET_ACCESS_KEY=$(_jq_get $output SecretAccessKey)
+export AWS_SESSION_TOKEN=$(_jq_get $output SessionToken)
 
 if [[ $SHOW == 1 ]]; then
 	echo "# Linux env vars:"
-    echo "export AWS_DEFAULT_REGION=${AWS_REGION:-ap-northeast-1}"
     echo "export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID"
     echo "export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY"
     echo "export AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN"
@@ -67,3 +170,6 @@ if [[ $SHOW == 1 ]]; then
         AWS_SECRET_KEY='$AWS_SECRET_ACCESS_KEY'
         AWS_TOKEN='$AWS_SESSION_TOKEN')"
 fi
+
+unset -f _jq_get
+unset -f _get_new_role_creds

@@ -50,6 +50,6 @@ case $cmd in
     _describe $cmd_args
   ;;
   *)
-    aws ec2 $cmd-instances --instance-ids $ec2id  --no-cli-pager
+    aws ec2 $cmd-instances --instance-ids $ec2id --no-cli-pager
   ;;
 esac

@@ -2,8 +2,8 @@
 A set of bash scripts to help with daily AWS work.
 
 Tool list
-* [aws-mfa-me](#aws-mfa-me) - minimal AWS credential session initialization for MFA accounts.
-* [ec2](#ec2) - simple search & control of EC2 instances.
+* [aws-mfa-me](#aws-mfa-me) - automated AWS credential session caching & refreshing for MFA accounts.
+* [ec2](#ec2) - simple search & control of EC2 instances by name.
 * [get-ec2id-by-name](#get-ec2id-by-name) - self explanatory.
 * [get-my-ip](#get-my-ip) - get WAN IP of current computer.
 * [get-remote-ip](#get-remote-ip) - get WAN IP of remote computer by domain.
@@ -24,16 +24,55 @@ source <(curl -s https://raw.githubusercontent.com/joy13975/AWS-helper-tools/mas
 ## `aws-mfa-me`
 
 Activates an AWS session in the current shell with MFA.
+Uses previously obtained & cached credentials if available.
 
+### Configuration
+
+You must enter the following AWS configurations for this command to work.
+1. `~/.aws/credentials`
+
+Add the following to the end of the file
+```ini
+[my_iam_name]
+aws_access_key_id = my_access_key
+aws_secret_access_key = my_sec_key
+mfa_serial = arn:aws:iam::my_account_id:mfa/my_iam_username
+region = my_usual_region
+```
+
+* `my_iam_name`: the name for your IAM access key pair - it's up to you to decide. Just don't create duplicate names.
+* `my_access_key`, `my_sec_key`, `mfa_serial`: obtained from the AWS Console.
+    * Note: `mfa_serial` in this file is non-standard, but if you don't know what that means then it doesn't matter to you.
+* `my_usual_region`: e.g. `ap-northeast-1` for Tokyo.
+
+1. `~/.aws/config`
+
+Add the following to the end of the file
+```ini
+[profile my_dev_role]
+role_arn = arn:aws:iam::my_account_id:role/my_dev_role
+mfa_serial = arn:aws:iam::my_account_id:mfa/my_mfa_device_name
+source_profile = my_iam_name
+role_session_name = my_session_name
+region = my_usual_region
+```
+* `my_dev_role`: like `my_iam_name` but for your **role** profile.
+* `my_mfa_device_name`: obtained from AWS Console.
+* `my_iam_name`: the same value as in the previous sections.
+* `my_session_name`: a name for the credential session. If your IAM permissions require it to be in a certain format (such as starting with your IAM username), then you must adhere to the rule.
+* `my_usual_region`: same as explained in the previous section.
 
 ### Usage
 ```shell
-source aws-mfa-me
+source aws-mfa-me <profile/role name>
 ```
 
 Optional environment variables:
-* `duration`: Session duration; 129600 (36h) by default.
-* `mfa_arn`: Specific MFA device ARN; the first MFA device is used by default. Usage example: `mfa_arn=<specific device arn> source aws-mfa-me`
+* `FORCE_REFRESH`: Ignore remaining session duration of target profile and force a refresh of credentials.
+* `REFRESH_THRESH`: Value (minutes) above which a credential refresh will not be attempted. Defaults to 10 (minutes).
+* `DURATION`: Session duration. Defaults to 3600 (seconds).
+* `REGION`: Session region. Defaults `duration` as defined in AWS profile configs (role takes precedence over source profile).
+* `ROLE_ARN`: Custom role ARN for when it is not defined in the AWS profile configs.
 
 You will be prompted for MFA code. 
 
@@ -83,7 +122,7 @@ A `aws ec2` helper that works with instance names (tag value) rather than instan
 ---
 ## `get-ec2id-by-name`
 
-Self explanatory.
+Given a name, retrieve the corresponding EC2 instance's ID.
 
 ### Usage
 `get-ec2id-by-name [EC2 instance name]`
