@@ -16,8 +16,8 @@ Use the auto installer script:
 ```shell
 source <(curl -s https://raw.githubusercontent.com/joy13975/AWS-helper-tools/master/install.sh)
 ```
-
 ※ This automatically inserts to $PATH in your RC file (`~/.zsh` or `~/.bashrc`)
+
 
 ---
 
@@ -68,7 +68,7 @@ source aws-mfa-me <profile/role name>
 ```
 
 Optional environment variables:
-* `FORCE_REFRESH`: Ignore remaining session duration of target profile and force a refresh of credentials.
+* `FORCE`: Ignore remaining session duration of target profile and force a refresh of credentials.
 * `REFRESH_THRESH`: Value (minutes) above which a credential refresh will not be attempted. Defaults to 10 (minutes).
 * `DURATION`: Session duration. Defaults to 3600 (seconds).
 * `REGION`: Session region. Defaults `duration` as defined in AWS profile configs (role takes precedence over source profile).

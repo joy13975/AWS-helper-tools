@@ -1,4 +1,3 @@
 #!/usr/bin/env bash
-
-user_arn=$(aws sts get-caller-identity | pyjq .Arn)
+user_arn=$(out=$(aws sts get-caller-identity) && echo "$out" | pyjq .Arn)
 echo ${user_arn##*/}

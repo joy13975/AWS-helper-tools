@@ -13,7 +13,7 @@ if [ -z $target_profile ]; then
 fi
 
 _get_field() {
-    echo $1 | pyjq .Credentials.$2
+    echo "$1" | pyjq .Credentials.$2
 }
 
 _make_optional_arg() {
@@ -30,6 +30,12 @@ _get_from_config() {
     aws configure --profile $1 get $2
 }
 
+source_profile=$(_get_from_config $target_profile source_profile)
+
+_is_role() {
+    echo $(test -z $source_profile; echo $?)
+}
+
 _get_new_role_creds() {
     echo Attempting to refresh credentials...
     [ ! -z $(aws configure list-profiles | grep -w "$target_profile$") ]
@@ -38,9 +44,7 @@ _get_new_role_creds() {
         return 1
     fi
 
-    local source_profile=$(_get_from_config $target_profile source_profile)
-    local is_role=$(test -z $source_profile; echo $?)
-    if [ $is_role -eq 0 ]; then
+    if [ "$(_is_role)" -eq 0 ]; then
         echo "source_profile is not defined for ${target_profile} - treating it as an IAM user!"
         source_profile=$target_profile
     else
@@ -51,7 +55,7 @@ _get_new_role_creds() {
     unset AWS_SECRET_ACCESS_KEY
 
     local role_arn_arg=
-    if [ $is_role -eq 1 ]; then
+    if [ "$(_is_role)" -eq 1 ]; then
         local role_arn=${ROLE_ARN:-$(_get_from_config $target_profile role_arn)}
         if [ -z $role_arn ]; then
             echo No role_arn found in profile "${target_profile}"
@@ -61,7 +65,8 @@ _get_new_role_creds() {
     fi
 
     local mfa_serial=$(_get_from_config $target_profile mfa_serial)
-    local session_name=${$(_get_from_config $target_profile role_session_name):-"temp-session"}
+    local role_session_name=$(_get_from_config $target_profile role_session_name)
+    local session_name=${role_session_name:-"temp-session"}
     local duration=${DURATION:-$(_get_from_config $target_profile duration_seconds)}
     duration=${duration:-3600}
     local endpoint_url=$(_get_from_config $target_profile endpoint_url)
@@ -82,7 +87,7 @@ _get_new_role_creds() {
     fi
 
     local cmd=
-    if [ $is_role -eq 1 ]; then
+    if [ "$(_is_role)" -eq 1 ]; then
         cmd=$(echo "AWS_PROFILE=${source_profile} aws sts assume-role \
             $region_arg \
             $role_arn_arg \
@@ -103,14 +108,14 @@ _get_new_role_creds() {
     echo $cmd
     output=$(eval $cmd)
     if [ $? -ne 0 ]; then
-        echo $output
+        echo "$output"
         echo
         echo 'Something went wrong...'
         return 1
     fi
 
     # save output to cache
-    echo $output > $cache_path
+    echo "$output" > $cache_path
     chmod 600 $cache_path
     
     local _ret_varname=$1
@@ -119,22 +124,22 @@ _get_new_role_creds() {
 }
 
 
-local refresh_thresh=${REFRESH_THRESH:-10}
+refresh_thresh=${REFRESH_THRESH:-10}
 # create cache dir if not exists
-local cache_dir=~/.aws/aht_cache
+cache_dir=~/.aws/aht_cache
 mkdir -p $cache_dir
 
 # check whether cache exists
-local cache_path=$cache_dir/$target_profile
-local force_refresh=${FORCE_REFRESH:-0}
-if [ -e $cache_path ] && [ $force_refresh -ne 1 ]; then
+cache_path=$cache_dir/$target_profile
+force_refresh=${FORCE:-0}
+if [ -e $cache_path ] && [ $force_refresh != "1" ]; then
     # check that remaining time is sufficient
     output=$(cat $cache_path)
 
     fmt="%Y-%m-%dT%H:%M:%SZ"
-    curr_ts=$(date -j -f $fmt $(date -u +$fmt) +%s)
+    curr_ts=$(pydate2sec $fmt $(date -u +$fmt))
     aws_fmt="%Y-%m-%dT%H:%M:%S+00:00"
-    expiry=$(date -j -f $aws_fmt $(_get_field $output Expiration) +%s)
+    expiry=$(pydate2sec $aws_fmt $(_get_field "$output" Expiration))
     tte=$(((${expiry}-${curr_ts})/60))
     echo "Remaining session: ${tte} minutes; min required: ${refresh_thresh} minutes"
     if [ $tte -le $refresh_thresh ]; then
@@ -153,18 +158,18 @@ if [ $? -ne 0 ]; then
 fi
 
 echo Applying session credentials...
-export AWS_ACCESS_KEY_ID=$(_get_field $output AccessKeyId)
-export AWS_SECRET_ACCESS_KEY=$(_get_field $output SecretAccessKey)
-export AWS_SESSION_TOKEN=$(_get_field $output SessionToken)
+export AWS_ACCESS_KEY_ID=$(_get_field "$output" AccessKeyId)
+export AWS_SECRET_ACCESS_KEY=$(_get_field "$output" SecretAccessKey)
+export AWS_SESSION_TOKEN=$(_get_field "$output" SessionToken)
 
 if [[ $SHOW == 1 ]]; then
-	echo "# Linux env vars:"
+    echo "# Linux env vars:"
     echo "export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID"
     echo "export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY"
     echo "export AWS_SESSION_TOKEN=$AWS_SESSION_TOKEN"
     echo
 
-	echo "# Snowflake credentials:"
+    echo "# Snowflake credentials:"
     echo -e "CREDENTIALS=(
         AWS_KEY_ID='$AWS_ACCESS_KEY_ID'
         AWS_SECRET_KEY='$AWS_SECRET_ACCESS_KEY'
@@ -172,4 +177,14 @@ if [[ $SHOW == 1 ]]; then
 fi
 
 unset -f _get_field
+unset -f _make_optional_arg
+unset -f _get_from_config
+unset -f _is_role
 unset -f _get_new_role_creds
+
+unset source_profile
+unset target_profile
+unset refresh_thresh
+unset cache_dir
+unset cache_path
+unset force_refresh
