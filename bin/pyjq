@@ -1,0 +1,17 @@
+#!/usr/bin/env python
+from __future__ import print_function
+
+import sys
+import json
+
+obj = json.loads(sys.stdin.read())
+res = obj
+if len(sys.argv) > 1:
+    jpath = sys.argv[1]
+    for p in  jpath.strip('.').split('.'):
+        if p.startswith('[') and p.endswith(']'):
+            res = res[int(p.strip('[]'))]
+        else:
+            res = res[p]
+        
+print(res)

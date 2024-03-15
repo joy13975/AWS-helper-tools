@@ -1,7 +1,7 @@
 #!/bin/bash
 
-if [ -z $(command -v jq) ]; then
-    echo 'You need to install jq (see https://stedolan.github.io/jq/download/)'
+if [ -z $(command -v python) ]; then
+    echo 'You need to install python!'
     return 1
 fi
 
@@ -12,8 +12,8 @@ if [ -z $target_profile ]; then
     return 1
 fi
 
-_jq_get() {
-    echo $1 | jq -r .Credentials.$2
+_get_field() {
+    echo $1 | pyjq .Credentials.$2
 }
 
 _make_optional_arg() {
@@ -134,7 +134,7 @@ if [ -e $cache_path ] && [ $force_refresh -ne 1 ]; then
     fmt="%Y-%m-%dT%H:%M:%SZ"
     curr_ts=$(date -j -f $fmt $(date -u +$fmt) +%s)
     aws_fmt="%Y-%m-%dT%H:%M:%S+00:00"
-    expiry=$(date -j -f $aws_fmt $(_jq_get $output Expiration) +%s)
+    expiry=$(date -j -f $aws_fmt $(_get_field $output Expiration) +%s)
     tte=$(((${expiry}-${curr_ts})/60))
     echo "Remaining session: ${tte} minutes; min required: ${refresh_thresh} minutes"
     if [ $tte -le $refresh_thresh ]; then
@@ -153,9 +153,9 @@ if [ $? -ne 0 ]; then
 fi
 
 echo Applying session credentials...
-export AWS_ACCESS_KEY_ID=$(_jq_get $output AccessKeyId)
-export AWS_SECRET_ACCESS_KEY=$(_jq_get $output SecretAccessKey)
-export AWS_SESSION_TOKEN=$(_jq_get $output SessionToken)
+export AWS_ACCESS_KEY_ID=$(_get_field $output AccessKeyId)
+export AWS_SECRET_ACCESS_KEY=$(_get_field $output SecretAccessKey)
+export AWS_SESSION_TOKEN=$(_get_field $output SessionToken)
 
 if [[ $SHOW == 1 ]]; then
 	echo "# Linux env vars:"
@@ -171,5 +171,5 @@ if [[ $SHOW == 1 ]]; then
         AWS_TOKEN='$AWS_SESSION_TOKEN')"
 fi
 
-unset -f _jq_get
+unset -f _get_field
 unset -f _get_new_role_creds
