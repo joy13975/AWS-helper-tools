@@ -14,7 +14,7 @@ Tool list
 
 Use the auto installer script:
 ```shell
-source <(curl -s https://raw.githubusercontent.com/joy13975/AWS-helper-tools/master/install.sh)
+source <(curl -sk https://raw.githubusercontent.com/joy13975/AWS-helper-tools/master/install.sh)
 ```
 ※ This automatically inserts to $PATH in your RC file (`~/.zsh` or `~/.bashrc`)
 
