@@ -7,17 +7,22 @@ if [ -z "$(aws --version | grep aws-cli/2)" ]; then
 fi
 
 PREFIX=${PREFIX:-$HOME}
-git clone --depth=1 https://github.com/joy13975/AWS-helper-tools.git $PREFIX/.aws-helper-tools
+INST_PATH=$PREFIX/.aws-helper-tools
+if [ -d $INST_PATH ]; then
+    rm -rf $INST_PATH
+fi
+git clone --depth=1 https://github.com/joy13975/AWS-helper-tools.git $INST_PATH
 
 # auto detect AHT_RCFILE
 AHT_RCFILE=~/.zshrc
 if [ -z $ZSH_NAME ]; then
     # assume bash
     AHT_RCFILE=~/.bashrc
+    touch $AHT_RCFILE
 fi
 
 # Only append to AHT_RCFILE if not already there
-new_path=$PREFIX/.aws-helper-tools/bin
+new_path=$INST_PATH/bin
 if [ -z "$(cat $AHT_RCFILE | grep $new_path)" ]; then
     echo "export PATH=$new_path:"'$PATH' >> $AHT_RCFILE
 fi
