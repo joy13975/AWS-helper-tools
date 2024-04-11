@@ -12,7 +12,7 @@ Tool list
 
 ## Installation
 
-Use the auto installer script:
+Use the auto installer script (requires Bash-compatible shell):
 ```shell
 source <(curl -sk https://raw.githubusercontent.com/joy13975/AWS-helper-tools/master/install.sh)
 ```
@@ -24,7 +24,7 @@ source <(curl -sk https://raw.githubusercontent.com/joy13975/AWS-helper-tools/ma
 ## `aws-mfa-me`
 
 Activates an AWS session in the current shell with MFA.
-Uses previously obtained & cached credentials if available.
+The tool automatically caches credentials and re-use them if available.
 
 ### Configuration
 
@@ -42,7 +42,8 @@ region = my_usual_region
 
 * `my_iam_name`: the name for your IAM access key pair - it's up to you to decide. Just don't create duplicate names.
 * `my_access_key`, `my_sec_key`, `mfa_serial`: obtained from the AWS Console.
-    * Note: `mfa_serial` in this file is non-standard, but if you don't know what that means then it doesn't matter to you.
+    * Note: `mfa_serial` in this file is non-standard.
+    * You must set `mfa_serial` here if you need to activate this **IAM User** to use `aws-cli`.
 * `my_usual_region`: e.g. `ap-northeast-1` for Tokyo.
 
 1. `~/.aws/config`
@@ -57,7 +58,9 @@ role_session_name = my_session_name
 region = my_usual_region
 ```
 * `my_dev_role`: like `my_iam_name` but for your **role** profile.
-* `my_mfa_device_name`: obtained from AWS Console.
+* `mfa_serial`: MFA ARN obtained from AWS Console.
+    * You must set `mfa_serial` here if you need to activate this **IAM Role** to use `aws-cli`.
+    * This could be the same value as the `mfa_serial` value in `[my_iam_name]` of `~/.aws/credentials`.
 * `my_iam_name`: the same value as in the previous sections.
 * `my_session_name`: a name for the credential session. If your IAM permissions require it to be in a certain format (such as starting with your IAM username), then you must adhere to the rule.
 * `my_usual_region`: same as explained in the previous section.
