@@ -177,7 +177,6 @@ fi
 unset -f _get_field
 unset -f _make_optional_arg
 unset -f _get_from_config
-unset -f _is_role
 unset -f _get_new_role_creds
 
 unset source_profile
