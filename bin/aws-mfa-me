@@ -32,10 +32,6 @@ _get_from_config() {
 
 source_profile=$(_get_from_config $target_profile source_profile)
 
-_is_role() {
-    echo $(test -z $source_profile; echo $?)
-}
-
 _get_new_role_creds() {
     echo Attempting to refresh credentials...
     [ ! -z $(aws configure list-profiles | grep -w "$target_profile$") ]
@@ -44,7 +40,8 @@ _get_new_role_creds() {
         return 1
     fi
 
-    if [ "$(_is_role)" -eq 0 ]; then
+    local is_role=$(test -z $source_profile; echo $?)
+    if [ $is_role -eq 0 ]; then
         echo "source_profile is not defined for ${target_profile} - treating it as an IAM user!"
         source_profile=$target_profile
     else
@@ -55,13 +52,14 @@ _get_new_role_creds() {
     unset AWS_SECRET_ACCESS_KEY
 
     local role_arn_arg=
-    if [ "$(_is_role)" -eq 1 ]; then
+    if [ $is_role -eq 1 ]; then
         local role_arn=${ROLE_ARN:-$(_get_from_config $target_profile role_arn)}
         if [ -z $role_arn ]; then
             echo No role_arn found in profile "${target_profile}"
             return 1
+        else
+            role_arn_arg="--role-arn $role_arn"
         fi
-        role_arn_arg="--role-arn $role_arn"
     fi
 
     local mfa_serial=$(_get_from_config $target_profile mfa_serial)
@@ -87,7 +85,7 @@ _get_new_role_creds() {
     fi
 
     local cmd=
-    if [ "$(_is_role)" -eq 1 ]; then
+    if [ $is_role -eq 1 ]; then
         cmd=$(echo "AWS_PROFILE=${source_profile} aws sts assume-role \
             $region_arg \
             $role_arn_arg \
