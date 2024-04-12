@@ -1,0 +1,5 @@
+username,groups,policies
+"john.apple","ForceMFA,DataScientists",""
+"hama.chi","ForceMFA,DataScientists",""
+"li.jun","ForceMFA,DataScientists",""
+"julien.v","ForceMFA,DataScientists","AllowAssumeAdminRole,AllowCrossAccountAssumeAdminRole"

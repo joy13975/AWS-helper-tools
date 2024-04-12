@@ -7,7 +7,7 @@ Tool list
 * [get-ec2id-by-name](#get-ec2id-by-name) - self explanatory.
 * [get-my-ip](#get-my-ip) - get WAN IP of current computer.
 * [get-remote-ip](#get-remote-ip) - get WAN IP of remote computer by domain.
-
+* [create-accounts](#create-accounts) - for admins to create multiple user accounts at once
 ---
 
 ## Installation
@@ -150,5 +150,17 @@ Fetches WAN IP of a remote host.
 
 ### Usage
 `get-remote-ip [remote domain]`
+
+
+## `create-accounts`
+
+Creates multiple IAM Users with specific group membership and policy attachments.
+Automatically creates console login passwords maksed by snappass one-time link.
+
+### Usage
+`create-accounts [user list file]`
+
+
+See user list file format example at `examples/user_list.csv`
 
 ---

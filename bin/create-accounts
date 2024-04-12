@@ -1,0 +1,108 @@
+#!/usr/bin/env python
+import sys
+import csv
+
+from snappass import get_snappass_url
+
+try:
+    import boto3
+    import botocore
+except ImportError:
+    print('You need to install boto3 globally')
+    exit(1)
+
+try:
+    import passgen
+except ImportError:
+    print('You need to install passgen globally')
+    exit(1)
+
+iam_client = boto3.client('iam')
+def create_user(username):
+    try:
+        # Check if the user already exists
+        iam_client.create_user(
+            UserName=username
+        )
+        passwd = passgen.passgen(length=12, punctuation=True)
+        iam_client.create_login_profile(
+            UserName=username,
+            Password=passwd,
+            PasswordResetRequired=True
+        )
+        print(f'"{username}": {get_snappass_url(passwd)}')
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == 'EntityAlreadyExists':
+            print(f'User exists: "{username}"')
+            return
+        else:
+            raise
+
+sts = boto3.client('sts')
+account_id = None
+def get_policy_arn(name):
+    global account_id
+    account_id = account_id or sts.get_caller_identity()['Account']
+    policy_arn = f'arn:aws:iam::{account_id}:policy/{name}'
+    return policy_arn
+
+policy_cache = dict()
+def attach_policy(username, policy_name):
+    policy_arn = policy_cache.get(policy_name) or \
+        policy_cache.setdefault(
+            policy_name,
+            get_policy_arn(policy_name)
+        )
+    iam_client.attach_user_policy(
+        UserName=username,
+        PolicyArn=policy_arn,
+    )
+    policy_name = policy_arn.split('/')[-1]
+    print(f"Attached policy {policy_name} to user {username}")
+
+group_cache = set()
+def add_to_group(username, groupname):
+    if groupname not in group_cache:
+        try:
+            iam_client.create_group(
+                GroupName=groupname
+            )
+            print(f'Creating new group: "{groupname}"')
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == 'EntityAlreadyExists':
+                pass
+            else:
+                raise
+        group_cache.add(groupname)
+    
+    try:
+        iam_client.add_user_to_group(
+            GroupName=groupname,
+            UserName=username
+        )
+        print(f'Added "{username}" to group "{groupname}"')
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == 'EntityAlreadyExists':
+            print(f'User "{username}" already in group "{groupname}"')
+        else:
+            raise
+
+def process(username, groups, policies):
+    create_user(username)
+    for g in groups.split(','):
+        if g.strip():
+            add_to_group(username, g)
+    for p in policies.split(','):
+        if p.strip():
+            attach_policy(username, p)
+
+def main():
+    assert len(sys.argv) == 2, 'Expecting exactly 1 argument for user list file'
+    with open(sys.argv[1], 'r') as f:
+        csv_reader = csv.reader(f)
+        next(csv_reader)  # skip header
+        for l in csv_reader:
+            process(*l)
+
+if __name__ == '__main__':
+    main()
