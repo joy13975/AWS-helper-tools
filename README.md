@@ -126,6 +126,7 @@ A `aws ec2` helper that works with instance names (tag value) rather than instan
 ## `get-ec2id-by-name`
 
 Given a name, retrieve the corresponding EC2 instance's ID.
+By default matches using `contains()`; set `EXACT=1` for exact match.
 
 ### Usage
 `get-ec2id-by-name [EC2 instance name]`

@@ -4,7 +4,7 @@ name=$1
 cmd=$2
 cmd_args=${@:3}
 
-ec2id=$(get-ec2id-by-name $name)
+ec2id=$(EXACT=1 get-ec2id-by-name $name)
 if [ $? -ne 0 ]; then
   exit $?
 fi

@@ -1,10 +1,17 @@
 #!/bin/bash
 name=$1
+EXACT=${EXACT:-0}
 if [[ -z $name ]]; then
 	>&2 echo 'Provide name'
 	exit 1
 fi
 
+if [ "$EXACT" -ne "1" ]; then
+	condition="contains(Value, '$name')"
+else
+	condition="Value == '$name'"
+fi
+
 aws ec2 describe-instances \
-	--query "Reservations[].Instances[?Tags[?Key == 'Name' && contains(Value, '$name')][]][].InstanceId" \
+	--query "Reservations[].Instances[?Tags[?Key == 'Name' && $condition][]][].InstanceId" \
 	--out text | sed 's/\t/\n/g' | sort
