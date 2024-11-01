@@ -1,10 +1,13 @@
 #!/bin/bash
 
-name=$1
-cmd=$2
+cmd=$1
+name=$2
 cmd_args=${@:3}
 
-ec2id=$(EXACT=1 get-ec2id-by-name $name)
+test "$cmd"  == "list"
+exact_match=$?
+ec2id=$(EXACT=$exact_match get-ec2id-by-name $name)
+
 if [ $? -ne 0 ]; then
   exit $?
 fi
