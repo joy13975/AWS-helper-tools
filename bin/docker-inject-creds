@@ -6,7 +6,7 @@ if [ -z "$container" ]; then
     exit 1
 fi
 
-if [ ! `docker ps -q --filter "name=${container}"` ]; then 
+if [ ! `docker ps --format "{{.Names}}" | grep -x ${container}` ]; then 
     echo "No container found with the provided name"
     exit 1
 fi
