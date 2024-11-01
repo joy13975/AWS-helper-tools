@@ -1,0 +1,26 @@
+container=${1}
+profile_name=${2:-"my-profile"}
+
+if [ -z "$container" ]; then
+    echo "Usage: docker-inject-creds [container name] <profile name>"
+    exit 1
+fi
+
+if [ ! `docker ps -q --filter "name=${container}"` ]; then 
+    echo "No container found with the provided name"
+    exit 1
+fi
+
+if [ -z "$AWS_ACCESS_KEY_ID" ]; then
+    echo "No active AWS keys detected in current environment"
+    exit 1
+fi
+
+creds="[${profile_name}]
+aws_access_key_id = ${AWS_ACCESS_KEY_ID}
+aws_secret_access_key = ${AWS_SECRET_ACCESS_KEY}
+aws_session_token = ${AWS_SESSION_TOKEN}"
+
+docker exec ${container} /bin/sh -c "mkdir -p ~/.aws; echo \"${creds}\" > ~/.aws/credentials"
+
+echo "AWS credentials with profile name \`${profile_name}\` has been injected to container \`${container}\`."
